@@ -6,16 +6,26 @@ public class Account {
     private String fullName;
     private String birthDay;
     private String gender;
+    private int isStaff;
+
+    public int getIsStaff() {
+        return isStaff;
+    }
+
+    public void setIsStaff(int isStaff) {
+        this.isStaff = isStaff;
+    }
 
     public Account(){
 
     }
-    public Account(String phoneNumber, String isPassword, String fullName, String birthDay, String gender) {
+    public Account(String phoneNumber, String isPassword, String fullName, String birthDay, String gender, int isStaff) {
         this.phoneNumber = phoneNumber;
         this.isPassword = isPassword;
         this.fullName = fullName;
         this.birthDay = birthDay;
         this.gender = gender;
+        this.isStaff = isStaff;
     }
 
     public String getPhoneNumber() {

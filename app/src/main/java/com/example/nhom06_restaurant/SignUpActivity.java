@@ -19,6 +19,8 @@ import android.widget.Toast;
 
 import com.example.nhom06_restaurant.model.Account;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.FirebaseException;
@@ -37,31 +39,27 @@ public class SignUpActivity extends AppCompatActivity {
     FirebaseAuth firebaseAuth;
     AppCompatButton checkPhone, signUpBtn;
     TextInputEditText phone,password, confirmPass, fullName, birthDay;
-    String gender, phoneTemp;
+    String gender, phoneTemp, verificationID, otp;
     Boolean isChecked = false;
     RadioButton radioButtonBoy, radioButtonGirl;
     PhoneAuthProvider.OnVerificationStateChangedCallbacks callbacks = new PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
         @Override
         public void onVerificationCompleted(@NonNull PhoneAuthCredential phoneAuthCredential) {
-            firebaseAuth.signInWithCredential(phoneAuthCredential).addOnCompleteListener(SignUpActivity.this, new OnCompleteListener<AuthResult>() {
-                @Override
-                public void onComplete(@NonNull Task<AuthResult> task) {
-                    isChecked = true;
-                    Toast.makeText(SignUpActivity.this, "Verified", Toast.LENGTH_SHORT).show();
-                }
-            });
+            otp = phoneAuthCredential.getSmsCode();
+            Toast.makeText(SignUpActivity.this,otp,Toast.LENGTH_SHORT);
         }
 
         @Override
         public void onVerificationFailed(@NonNull FirebaseException e) {
             phoneTemp = null;
             Toast.makeText(SignUpActivity.this, e.toString(),Toast.LENGTH_LONG).show();
-            Log.d(null, e.toString());
+            phone.setText(e.toString());
         }
         @Override
         public void onCodeSent(@NonNull String s, @NonNull PhoneAuthProvider.ForceResendingToken forceResendingToken) {
             super.onCodeSent(s, forceResendingToken);
-            Toast.makeText(SignUpActivity.this, "Check your sms to confirm OTP",Toast.LENGTH_SHORT).show();
+            verificationID = s;
+            Toast.makeText(SignUpActivity.this, verificationID,Toast.LENGTH_SHORT).show();
         }
     };
     @Override
@@ -103,9 +101,11 @@ public class SignUpActivity extends AppCompatActivity {
                         Toast.makeText(SignUpActivity.this, "Please enter your phone number", Toast.LENGTH_SHORT).show();
                     } else {
                         checkPhone.setText("Verify");
-                        String phoneNumber = "+84" + phone.getText().toString().trim();
+                        String phoneNumber = "+84 " + phone.getText().toString().trim();
                         phoneTemp = phone.getText().toString().trim();
                         phone.setText("");
+                        phone.setHint("Enter code: ");
+                        phone.setError(null);
                         PhoneAuthOptions opt = PhoneAuthOptions.newBuilder(firebaseAuth).setPhoneNumber(phoneNumber).
                                 setTimeout(60L, TimeUnit.SECONDS).
                                 setActivity(SignUpActivity.this).
@@ -114,6 +114,23 @@ public class SignUpActivity extends AppCompatActivity {
                     }
                 }else {
                     checkPhone.setText("Check");
+                    phone.setHint("Phone number: ");
+                    if (!phone.getText().equals("")) {
+                        PhoneAuthCredential credential = PhoneAuthProvider.getCredential(verificationID,phone.getText().toString());
+                        firebaseAuth.signInWithCredential(credential).addOnSuccessListener(new OnSuccessListener<AuthResult>() {
+                            @Override
+                            public void onSuccess(AuthResult authResult) {
+                                Toast.makeText(SignUpActivity.this,"Verified", Toast.LENGTH_SHORT);
+                                isChecked = true;
+                            }
+                        }).addOnFailureListener(new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                Toast.makeText(SignUpActivity.this,"Fail To Verified", Toast.LENGTH_SHORT);
+                                isChecked = false;
+                            }
+                        });
+                    }
                 }
             }
         });
@@ -132,10 +149,9 @@ public class SignUpActivity extends AppCompatActivity {
                         progressBar.setVisibility(View.GONE);
                         gender = "Boy";
                         if (radioButtonGirl.isChecked()) gender = "Girl";
-                        Account account = new Account(phoneTemp, password.getText().toString(), fullName.getText().toString(), birthDay.getText().toString(), gender);
-                        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("users");
-                        DatabaseReference pushData = databaseReference.push();
-                        pushData.setValue(account);
+                        Account account = new Account(phoneTemp, password.getText().toString(), fullName.getText().toString(), birthDay.getText().toString(), gender,0);
+                        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("users").child(phoneTemp);
+                        databaseReference.setValue(account);
                         Toast.makeText(SignUpActivity.this,"Sign up success", Toast.LENGTH_SHORT).show();
                         finish();
                     }
